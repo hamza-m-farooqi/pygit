@@ -31,6 +31,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `rm`
 - [x] `restore --staged`
 - [x] `.gitignore`-aware `add/status`
+- [x] improved `.gitignore` compatibility (Git-style wildmatch)
 - [x] `commit --amend`
 - [x] `reset --soft|--mixed`
 - [x] `remote` (add/list/get-url/remove)
@@ -133,7 +134,7 @@ uv run pytest
 - `pygit checkout` switches to a branch or detaches `HEAD` at a revision.
 - `pygit rm` removes tracked files from both index and working tree.
 - `pygit restore --staged` resets staged content for paths to match `HEAD`.
-- `status` and `add` respect root `.gitignore` patterns.
+- `status` and `add` respect root `.gitignore` patterns with Git-style wildmatch behavior.
 - Author values come from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (or committer variants).
 - If env vars are missing, default author values are used.
 

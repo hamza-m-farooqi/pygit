@@ -5,6 +5,7 @@ description = "Minimal educational Git-like CLI utility in Python"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pathspec>=1.0.4",
     "pytest>=9.0.2",
 ]
 
