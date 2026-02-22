@@ -9,6 +9,7 @@ from pathlib import Path
 from ignore import is_ignored, load_ignore_rules
 from index import IndexEntry, build_entry, list_working_tree_files, read_index, write_index
 from objects import hash_object, read_object
+from remotes import add_remote, get_remote_url, list_remotes, remove_remote
 from repo import ensure_repo, git_dir
 from revisions import current_branch, head_commit, head_ref, list_branches, resolve_revision
 
@@ -545,6 +546,32 @@ def cmd_reset(args: argparse.Namespace) -> int:
     label = branch if branch else "HEAD"
     print(f"reset {label} to {target[:7]} ({args.mode})")
     return 0
+
+
+def cmd_remote(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    subcmd = args.remote_cmd
+
+    if subcmd == "list":
+        remotes = list_remotes(repo_root)
+        for name in sorted(remotes):
+            if args.verbose:
+                url = remotes[name]
+                print(f"{name}\t{url} (fetch)")
+                print(f"{name}\t{url} (push)")
+            else:
+                print(name)
+        return 0
+    if subcmd == "add":
+        add_remote(repo_root, args.name, args.url)
+        return 0
+    if subcmd == "remove":
+        remove_remote(repo_root, args.name)
+        return 0
+    if subcmd == "get-url":
+        print(get_remote_url(repo_root, args.name))
+        return 0
+    raise ValueError(f"unsupported remote subcommand: {subcmd}")
 
 
 def cmd_checkout(args: argparse.Namespace) -> int:

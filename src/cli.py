@@ -15,6 +15,7 @@ from commands import (
     cmd_restore,
     cmd_rm,
     cmd_reset,
+    cmd_remote,
     cmd_rev_parse,
     cmd_init,
     cmd_ls_files,
@@ -106,6 +107,28 @@ def build_parser() -> argparse.ArgumentParser:
     reset_parser.set_defaults(mode="mixed")
     reset_parser.add_argument("revision", help="Target revision")
     reset_parser.set_defaults(func=cmd_reset)
+
+    remote_parser = subparsers.add_parser("remote", help="Manage remotes")
+    remote_subparsers = remote_parser.add_subparsers(dest="remote_cmd")
+
+    remote_list_parser = remote_subparsers.add_parser("list", help="List remotes")
+    remote_list_parser.add_argument("-v", "--verbose", action="store_true", help="Show remote URLs")
+    remote_list_parser.set_defaults(func=cmd_remote)
+
+    remote_add_parser = remote_subparsers.add_parser("add", help="Add a remote")
+    remote_add_parser.add_argument("name", help="Remote name")
+    remote_add_parser.add_argument("url", help="Remote URL")
+    remote_add_parser.set_defaults(func=cmd_remote)
+
+    remote_remove_parser = remote_subparsers.add_parser("remove", help="Remove a remote")
+    remote_remove_parser.add_argument("name", help="Remote name")
+    remote_remove_parser.set_defaults(func=cmd_remote)
+
+    remote_get_url_parser = remote_subparsers.add_parser("get-url", help="Get remote URL")
+    remote_get_url_parser.add_argument("name", help="Remote name")
+    remote_get_url_parser.set_defaults(func=cmd_remote)
+
+    remote_parser.set_defaults(func=cmd_remote, remote_cmd="list", verbose=False)
 
     return parser
 

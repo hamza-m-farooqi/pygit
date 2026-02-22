@@ -33,6 +33,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `.gitignore`-aware `add/status`
 - [x] `commit --amend`
 - [x] `reset --soft|--mixed`
+- [x] `remote` (add/list/get-url/remove)
 - [ ] `push`
 
 ## Requirements
@@ -78,6 +79,11 @@ pygit write-tree
 pygit commit -m "<message>"
 pygit commit --amend [-m "<message>"]
 pygit reset [--soft|--mixed] <revision>
+pygit remote
+pygit remote list [-v]
+pygit remote add <name> <url>
+pygit remote get-url <name>
+pygit remote remove <name>
 pygit log [--oneline] [-n <count>]
 pygit rev-parse <revision>
 pygit branch [<name>]

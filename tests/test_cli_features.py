@@ -195,3 +195,34 @@ def test_reset_rejects_non_commit_revision(tmp_path: Path) -> None:
     proc = run_pygit(tmp_path, "reset", blob, check=False)
     assert proc.returncode == 1
     assert "does not resolve to a commit" in proc.stderr
+
+
+def test_remote_lifecycle(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+
+    run_pygit(tmp_path, "remote", "add", "origin", "git@github.com:example/repo.git")
+    listed = run_pygit(tmp_path, "remote").stdout.strip().splitlines()
+    assert listed == ["origin"]
+
+    verbose = run_pygit(tmp_path, "remote", "list", "-v").stdout
+    assert "origin\tgit@github.com:example/repo.git (fetch)" in verbose
+    assert "origin\tgit@github.com:example/repo.git (push)" in verbose
+
+    url = run_pygit(tmp_path, "remote", "get-url", "origin").stdout.strip()
+    assert url == "git@github.com:example/repo.git"
+
+    run_pygit(tmp_path, "remote", "remove", "origin")
+    assert run_pygit(tmp_path, "remote").stdout.strip() == ""
+
+
+def test_remote_add_duplicate_and_missing_remote_errors(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    run_pygit(tmp_path, "remote", "add", "origin", "git@github.com:example/repo.git")
+
+    dup = run_pygit(tmp_path, "remote", "add", "origin", "git@github.com:example/repo2.git", check=False)
+    assert dup.returncode == 1
+    assert "already exists" in dup.stderr
+
+    missing = run_pygit(tmp_path, "remote", "get-url", "upstream", check=False)
+    assert missing.returncode == 1
+    assert "does not exist" in missing.stderr
