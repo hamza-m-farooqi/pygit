@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -572,6 +573,32 @@ def cmd_remote(args: argparse.Namespace) -> int:
         print(get_remote_url(repo_root, args.name))
         return 0
     raise ValueError(f"unsupported remote subcommand: {subcmd}")
+
+
+def cmd_push(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    remote = args.remote or "origin"
+    branch = args.branch
+    if not branch:
+        branch = current_branch(repo_root)
+        if not branch:
+            raise ValueError("cannot push from detached HEAD without specifying a branch")
+
+    remotes = list_remotes(repo_root)
+    if remote not in remotes:
+        raise ValueError(f"remote '{remote}' does not exist")
+
+    proc = subprocess.run(
+        ["git", "push", remote, branch],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        detail = proc.stderr.strip() or proc.stdout.strip() or "unknown error"
+        raise ValueError(f"push failed: {detail}")
+    print(f"pushed {branch} to {remote}")
+    return 0
 
 
 def cmd_checkout(args: argparse.Namespace) -> int:

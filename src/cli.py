@@ -12,6 +12,7 @@ from commands import (
     cmd_diff,
     cmd_hash_object,
     cmd_log,
+    cmd_push,
     cmd_restore,
     cmd_rm,
     cmd_reset,
@@ -129,6 +130,11 @@ def build_parser() -> argparse.ArgumentParser:
     remote_get_url_parser.set_defaults(func=cmd_remote)
 
     remote_parser.set_defaults(func=cmd_remote, remote_cmd="list", verbose=False)
+
+    push_parser = subparsers.add_parser("push", help="Push a branch to a remote")
+    push_parser.add_argument("remote", nargs="?", help="Remote name (default: origin)")
+    push_parser.add_argument("branch", nargs="?", help="Branch name (default: current branch)")
+    push_parser.set_defaults(func=cmd_push)
 
     return parser
 

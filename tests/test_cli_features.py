@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from conftest import run_pygit
@@ -226,3 +227,44 @@ def test_remote_add_duplicate_and_missing_remote_errors(tmp_path: Path) -> None:
     missing = run_pygit(tmp_path, "remote", "get-url", "upstream", check=False)
     assert missing.returncode == 1
     assert "does not exist" in missing.stderr
+
+
+def test_push_to_local_bare_remote(tmp_path: Path) -> None:
+    work = tmp_path / "work"
+    remote = tmp_path / "remote.git"
+    work.mkdir()
+
+    run_pygit(work, "init", ".")
+    write(work / "hello.txt", "hello\n")
+    run_pygit(work, "add", "hello.txt")
+    run_pygit(work, "commit", "-m", "initial")
+    local_head = run_pygit(work, "rev-parse", "HEAD").stdout.strip()
+
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True, text=True)
+    run_pygit(work, "remote", "add", "origin", str(remote))
+    run_pygit(work, "push")
+
+    remote_head = subprocess.run(
+        ["git", "--git-dir", str(remote), "rev-parse", "refs/heads/master"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert remote_head == local_head
+
+
+def test_push_requires_branch_when_detached(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    write(tmp_path / "a.txt", "v1\n")
+    run_pygit(tmp_path, "add", "a.txt")
+    run_pygit(tmp_path, "commit", "-m", "c1")
+    first = run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip()
+    run_pygit(tmp_path, "branch", "feature")
+    write(tmp_path / "a.txt", "v2\n")
+    run_pygit(tmp_path, "add", "a.txt")
+    run_pygit(tmp_path, "commit", "-m", "c2")
+    run_pygit(tmp_path, "checkout", first)
+
+    proc = run_pygit(tmp_path, "push", check=False)
+    assert proc.returncode == 1
+    assert "detached HEAD" in proc.stderr
