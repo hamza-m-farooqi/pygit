@@ -12,6 +12,8 @@ from commands import (
     cmd_diff,
     cmd_hash_object,
     cmd_log,
+    cmd_restore,
+    cmd_rm,
     cmd_rev_parse,
     cmd_init,
     cmd_ls_files,
@@ -79,6 +81,15 @@ def build_parser() -> argparse.ArgumentParser:
     checkout_parser = subparsers.add_parser("checkout", help="Switch branches or detach HEAD at a commit")
     checkout_parser.add_argument("target", help="Branch name or revision")
     checkout_parser.set_defaults(func=cmd_checkout)
+
+    rm_parser = subparsers.add_parser("rm", help="Remove tracked files from index and working tree")
+    rm_parser.add_argument("paths", nargs="+", help="Tracked file or directory paths")
+    rm_parser.set_defaults(func=cmd_rm)
+
+    restore_parser = subparsers.add_parser("restore", help="Restore paths from HEAD into the index")
+    restore_parser.add_argument("--staged", action="store_true", help="Restore staged content only")
+    restore_parser.add_argument("paths", nargs="+", help="Pathspec to restore")
+    restore_parser.set_defaults(func=cmd_restore)
 
     return parser
 

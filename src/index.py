@@ -76,6 +76,7 @@ def write_index(repo_root: Path, entries: list[IndexEntry]) -> None:
     payload = bytearray()
     payload.extend(INDEX_HEADER.pack(INDEX_SIGNATURE, INDEX_VERSION, len(entries)))
     for entry in sorted(entries, key=lambda item: item.path):
+        entry_start = len(payload)
         encoded_path = entry.path.encode()
         payload.extend(
             INDEX_ENTRY_HEAD.pack(
@@ -95,7 +96,7 @@ def write_index(repo_root: Path, entries: list[IndexEntry]) -> None:
         )
         payload.extend(encoded_path)
         payload.append(0)
-        while len(payload) % 8 != 0:
+        while (len(payload) - entry_start) % 8 != 0:
             payload.append(0)
     payload.extend(hashlib.sha1(payload).digest())
     _index_path(repo_root).write_bytes(payload)

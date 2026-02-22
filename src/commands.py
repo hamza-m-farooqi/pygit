@@ -119,6 +119,25 @@ def _resolve_paths(repo_root: Path, raw_paths: list[str]) -> list[Path]:
     return unique
 
 
+def _normalize_pathspec(repo_root: Path, raw: str) -> str:
+    candidate = (Path.cwd() / raw).resolve(strict=False)
+    rel = candidate.relative_to(repo_root).as_posix()
+    return rel.strip("/")
+
+
+def _match_paths(pathspecs: list[str], candidates: set[str]) -> set[str]:
+    matched: set[str] = set()
+    for spec in pathspecs:
+        if spec in candidates:
+            matched.add(spec)
+            continue
+        prefix = f"{spec}/"
+        for candidate in candidates:
+            if candidate.startswith(prefix):
+                matched.add(candidate)
+    return matched
+
+
 def cmd_add(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     entries = read_index(repo_root)
@@ -157,11 +176,13 @@ def _status_sets(repo_root: Path) -> tuple[list[str], list[str], list[str], list
     )
     deleted = sorted(staged_paths - working_paths)
     untracked = sorted(working_paths - staged_paths)
-    staged = sorted(
+    staged_modified = {
         path
         for path in staged_paths
         if head_entries.get(path) != entries_by_path[path].sha1.hex()
-    )
+    }
+    staged_deleted = set(head_entries) - staged_paths
+    staged = sorted(staged_modified | staged_deleted)
     return staged, changed, deleted, untracked
 
 
@@ -395,6 +416,67 @@ def cmd_branch(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_rm(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    entries = read_index(repo_root)
+    if not entries:
+        raise ValueError("nothing to remove: index is empty")
+    by_path = {entry.path: entry for entry in entries}
+    tracked_paths = set(by_path)
+    specs = [_normalize_pathspec(repo_root, raw) for raw in args.paths]
+    to_remove = _match_paths(specs, tracked_paths)
+    if not to_remove:
+        raise ValueError("pathspec did not match any tracked files")
+
+    for rel in sorted(to_remove):
+        by_path.pop(rel, None)
+        file_path = repo_root / rel
+        if file_path.exists() and file_path.is_file():
+            file_path.unlink()
+    write_index(repo_root, list(by_path.values()))
+    return 0
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    if not args.staged:
+        raise ValueError("only '--staged' restore is currently implemented")
+
+    repo_root = ensure_repo()
+    entries = read_index(repo_root)
+    by_path = {entry.path: entry for entry in entries}
+    specs = [_normalize_pathspec(repo_root, raw) for raw in args.paths]
+    target_current = _match_paths(specs, set(by_path))
+    head_entries = _head_index_tree_entries(repo_root)
+    target_head = _match_paths(specs, set(head_entries))
+    target_paths = sorted(target_current | target_head)
+    if not target_paths:
+        raise ValueError("pathspec did not match any staged entries")
+
+    for path in target_paths:
+        from_head = head_entries.get(path)
+        if from_head is None:
+            by_path.pop(path, None)
+            continue
+        mode, sha_hex = from_head
+        by_path[path] = IndexEntry(
+            ctime_s=0,
+            ctime_n=0,
+            mtime_s=0,
+            mtime_n=0,
+            dev=0,
+            ino=0,
+            mode=int(mode, 8),
+            uid=0,
+            gid=0,
+            size=0,
+            sha1=bytes.fromhex(sha_hex),
+            flags=min(len(path.encode()), 0xFFF),
+            path=path,
+        )
+    write_index(repo_root, list(by_path.values()))
+    return 0
+
+
 def cmd_checkout(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     staged, changed, deleted, untracked = _status_sets(repo_root)
@@ -455,3 +537,12 @@ def _index_to_tree_map(entries: list[IndexEntry]) -> dict[str, object]:
             cursor = next_node
         cursor[parts[-1]] = entry
     return tree
+
+
+def _head_index_tree_entries(repo_root: Path) -> dict[str, tuple[str, str]]:
+    commit_id = _current_head_commit(repo_root)
+    if not commit_id:
+        return {}
+    tree_sha = _commit_tree_sha(repo_root, commit_id)
+    entries = _tree_entries(repo_root, tree_sha)
+    return {path: (mode, sha) for path, mode, sha in entries}
