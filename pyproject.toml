@@ -14,7 +14,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-py-modules = ["cli", "commands", "index", "objects", "repo"]
+py-modules = ["cli", "commands", "index", "objects", "repo", "revisions"]
 
 [tool.setuptools.package-dir]
 "" = "src"

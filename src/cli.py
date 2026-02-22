@@ -10,6 +10,7 @@ from commands import (
     cmd_diff,
     cmd_hash_object,
     cmd_log,
+    cmd_rev_parse,
     cmd_init,
     cmd_ls_files,
     cmd_status,
@@ -64,6 +65,10 @@ def build_parser() -> argparse.ArgumentParser:
     log_parser.add_argument("--oneline", action="store_true", help="Show one commit per line")
     log_parser.add_argument("-n", "--max-count", type=int, default=10, help="Limit number of commits")
     log_parser.set_defaults(func=cmd_log)
+
+    rev_parse_parser = subparsers.add_parser("rev-parse", help="Resolve revision to full commit id")
+    rev_parse_parser.add_argument("revision", help="Revision expression (HEAD, branch, short/full SHA)")
+    rev_parse_parser.set_defaults(func=cmd_rev_parse)
 
     return parser
 

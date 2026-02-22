@@ -9,6 +9,7 @@ from pathlib import Path
 from index import IndexEntry, build_entry, list_working_tree_files, read_index, write_index
 from objects import hash_object, read_object
 from repo import ensure_repo, git_dir
+from revisions import resolve_revision
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -46,7 +47,7 @@ def _parse_tree(data: bytes) -> list[tuple[str, str, str]]:
 
 def cmd_cat_file(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
-    obj = read_object(repo_root, args.object)
+    obj = read_object(repo_root, resolve_revision(repo_root, args.object))
     if args.type_only:
         print(obj.obj_type)
         return 0
@@ -310,8 +311,9 @@ def _parse_commit_payload(data: bytes) -> tuple[dict[str, str], str]:
 
 def cmd_log(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
-    commit_id = _current_head_commit(repo_root)
-    if not commit_id:
+    try:
+        commit_id = resolve_revision(repo_root, "HEAD")
+    except ValueError:
         print("fatal: your current branch 'master' does not have any commits yet")
         return 1
 
@@ -337,6 +339,12 @@ def cmd_log(args: argparse.Namespace) -> int:
             print("")
         commit_id = headers.get("parent")
         printed += 1
+    return 0
+
+
+def cmd_rev_parse(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    print(resolve_revision(repo_root, args.revision))
     return 0
 
 
