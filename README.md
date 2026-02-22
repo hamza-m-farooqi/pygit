@@ -24,7 +24,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `diff`
 - [x] `write-tree`
 - [x] `commit`
-- [ ] `log`
+- [x] `log`
 - [ ] `push`
 
 ## Requirements
@@ -68,6 +68,7 @@ pygit status
 pygit diff
 pygit write-tree
 pygit commit -m "<message>"
+pygit log [--oneline] [-n <count>]
 ```
 
 ## Development

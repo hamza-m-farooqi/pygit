@@ -296,6 +296,50 @@ def cmd_commit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _parse_commit_payload(data: bytes) -> tuple[dict[str, str], str]:
+    text = data.decode(errors="replace")
+    header_text, _, message = text.partition("\n\n")
+    headers: dict[str, str] = {}
+    for line in header_text.splitlines():
+        if " " not in line:
+            continue
+        key, value = line.split(" ", 1)
+        headers[key] = value
+    return headers, message.rstrip("\n")
+
+
+def cmd_log(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    commit_id = _current_head_commit(repo_root)
+    if not commit_id:
+        print("fatal: your current branch 'master' does not have any commits yet")
+        return 1
+
+    max_count = args.max_count
+    printed = 0
+    while commit_id and printed < max_count:
+        obj = read_object(repo_root, commit_id)
+        if obj.obj_type != "commit":
+            raise ValueError(f"object {commit_id} is not a commit")
+
+        headers, message = _parse_commit_payload(obj.data)
+        summary = message.splitlines()[0] if message else ""
+        if args.oneline:
+            print(f"{commit_id[:7]} {summary}")
+        else:
+            print(f"commit {commit_id}")
+            author = headers.get("author")
+            if author:
+                print(f"Author: {author}")
+            print("")
+            if summary:
+                print(f"    {summary}")
+            print("")
+        commit_id = headers.get("parent")
+        printed += 1
+    return 0
+
+
 def _index_to_tree_map(entries: list[IndexEntry]) -> dict[str, object]:
     tree: dict[str, object] = {}
     for entry in entries:

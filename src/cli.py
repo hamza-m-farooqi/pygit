@@ -9,6 +9,7 @@ from commands import (
     cmd_commit,
     cmd_diff,
     cmd_hash_object,
+    cmd_log,
     cmd_init,
     cmd_ls_files,
     cmd_status,
@@ -58,6 +59,11 @@ def build_parser() -> argparse.ArgumentParser:
     commit_parser = subparsers.add_parser("commit", help="Write commit object from index")
     commit_parser.add_argument("-m", "--message", required=True, help="Commit message")
     commit_parser.set_defaults(func=cmd_commit)
+
+    log_parser = subparsers.add_parser("log", help="Show commit history")
+    log_parser.add_argument("--oneline", action="store_true", help="Show one commit per line")
+    log_parser.add_argument("-n", "--max-count", type=int, default=10, help="Limit number of commits")
+    log_parser.set_defaults(func=cmd_log)
 
     return parser
 
