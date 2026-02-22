@@ -7,6 +7,7 @@ import struct
 from dataclasses import dataclass
 from pathlib import Path
 
+from ignore import is_ignored, load_ignore_rules
 from objects import hash_object
 from repo import git_dir
 
@@ -130,14 +131,30 @@ def is_ignored_path(path: Path) -> bool:
     return ".git" in path.parts
 
 
-def list_working_tree_files(repo_root: Path) -> list[Path]:
+def list_working_tree_files(repo_root: Path, tracked_paths: set[str] | None = None) -> list[Path]:
+    rules = load_ignore_rules(repo_root)
+    tracked_paths = tracked_paths or set()
     files: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(repo_root):
         root = Path(dirpath)
-        dirnames[:] = [d for d in dirnames if d != ".git"]
+        kept_dirs: list[str] = []
+        for dirname in dirnames:
+            if dirname == ".git":
+                continue
+            rel_dir = (root / dirname).relative_to(repo_root).as_posix()
+            if rel_dir in tracked_paths:
+                kept_dirs.append(dirname)
+                continue
+            if is_ignored(rel_dir, rules, is_dir=True):
+                continue
+            kept_dirs.append(dirname)
+        dirnames[:] = kept_dirs
         for filename in filenames:
             absolute = root / filename
-            if is_ignored_path(absolute.relative_to(repo_root)):
+            rel_file = absolute.relative_to(repo_root).as_posix()
+            if is_ignored_path(Path(rel_file)):
+                continue
+            if rel_file not in tracked_paths and is_ignored(rel_file, rules, is_dir=False):
                 continue
             files.append(absolute)
     return sorted(files)

@@ -6,6 +6,7 @@ import os
 import time
 from pathlib import Path
 
+from ignore import is_ignored, load_ignore_rules
 from index import IndexEntry, build_entry, list_working_tree_files, read_index, write_index
 from objects import hash_object, read_object
 from repo import ensure_repo, git_dir
@@ -142,8 +143,12 @@ def cmd_add(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     entries = read_index(repo_root)
     by_path = {entry.path: entry for entry in entries}
+    rules = load_ignore_rules(repo_root)
     for file_path in _resolve_paths(repo_root, args.paths):
         if file_path.is_file():
+            rel = file_path.relative_to(repo_root).as_posix()
+            if rel not in by_path and is_ignored(rel, rules, is_dir=False):
+                continue
             entry = build_entry(repo_root, file_path)
             by_path[entry.path] = entry
     write_index(repo_root, list(by_path.values()))
@@ -165,7 +170,8 @@ def _status_sets(repo_root: Path) -> tuple[list[str], list[str], list[str], list
     staged_paths = {entry.path for entry in entries}
     entries_by_path = {entry.path: entry for entry in entries}
     head_entries = _head_index_like_entries(repo_root)
-    working_files = list_working_tree_files(repo_root)
+    tracked_paths = set(staged_paths) | set(head_entries)
+    working_files = list_working_tree_files(repo_root, tracked_paths=tracked_paths)
     working_paths = {path.relative_to(repo_root).as_posix() for path in working_files}
 
     changed = sorted(
