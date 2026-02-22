@@ -65,14 +65,19 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "pathspec" },
+]
+
+[package.optional-dependencies]
+dev = [
     { name = "pytest" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "pathspec", specifier = ">=1.0.4" },
-    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "pygments"

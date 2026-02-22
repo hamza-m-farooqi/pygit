@@ -54,6 +54,31 @@ Run CLI help:
 uv run pygit --help
 ```
 
+## Install As Package (After Cloning)
+
+```bash
+git clone <your-fork-or-repo-url>
+cd pygit
+```
+
+Install as a user-level CLI command with `uv`:
+
+```bash
+uv tool install --from . pygit
+```
+
+Then run from anywhere:
+
+```bash
+pygit --help
+```
+
+If you update local code and want to reinstall:
+
+```bash
+uv tool install --from . pygit --force
+```
+
 ## Quick Start
 
 ```bash
@@ -111,10 +136,16 @@ Project layout:
     └── __main__.py
 ```
 
-Add dependencies with:
+Add runtime dependencies with:
 
 ```bash
 uv add <package>
+```
+
+Add development dependencies with:
+
+```bash
+uv add --dev <package>
 ```
 
 Basic sanity check:
@@ -126,6 +157,7 @@ uv run python -m compileall -q src
 Run tests:
 
 ```bash
+uv sync --extra dev
 uv run pytest
 ```
 
