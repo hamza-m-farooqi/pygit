@@ -162,3 +162,36 @@ def test_commit_requires_message_without_amend(tmp_path: Path) -> None:
     proc = run_pygit(tmp_path, "commit", check=False)
     assert proc.returncode == 1
     assert "commit message is required" in proc.stderr
+
+
+def test_reset_soft_and_mixed(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    write(tmp_path / "f.txt", "v1\n")
+    run_pygit(tmp_path, "add", "f.txt")
+    run_pygit(tmp_path, "commit", "-m", "c1")
+    c1 = run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip()
+
+    write(tmp_path / "f.txt", "v2\n")
+    run_pygit(tmp_path, "add", "f.txt")
+    run_pygit(tmp_path, "commit", "-m", "c2")
+    c2 = run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip()
+    assert c1 != c2
+
+    run_pygit(tmp_path, "reset", "--soft", c1)
+    assert run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip() == c1
+    soft_status = run_pygit(tmp_path, "status").stdout
+    assert "staged:   f.txt" in soft_status
+
+    run_pygit(tmp_path, "reset", "--mixed", c1)
+    mixed_status = run_pygit(tmp_path, "status").stdout
+    assert "Changes to be committed:" not in mixed_status
+    assert "modified: f.txt" in mixed_status
+
+
+def test_reset_rejects_non_commit_revision(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    write(tmp_path / "blob.txt", "blob\n")
+    blob = run_pygit(tmp_path, "hash-object", "-w", "blob.txt").stdout.strip()
+    proc = run_pygit(tmp_path, "reset", blob, check=False)
+    assert proc.returncode == 1
+    assert "does not resolve to a commit" in proc.stderr

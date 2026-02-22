@@ -70,6 +70,41 @@ def _commit_tree_sha(repo_root: Path, commit_id: str) -> str:
     return tree_sha
 
 
+def _update_head_target(repo_root: Path, commit_id: str) -> None:
+    symbolic = head_ref(repo_root)
+    if symbolic:
+        target = git_dir(repo_root) / symbolic
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"{commit_id}\n", encoding="utf-8")
+        return
+    (git_dir(repo_root) / "HEAD").write_text(f"{commit_id}\n", encoding="utf-8")
+
+
+def _index_entries_from_commit(repo_root: Path, commit_id: str) -> list[IndexEntry]:
+    tree_sha = _commit_tree_sha(repo_root, commit_id)
+    entries = _tree_entries(repo_root, tree_sha)
+    result: list[IndexEntry] = []
+    for path, mode, sha in entries:
+        result.append(
+            IndexEntry(
+                ctime_s=0,
+                ctime_n=0,
+                mtime_s=0,
+                mtime_n=0,
+                dev=0,
+                ino=0,
+                mode=int(mode, 8),
+                uid=0,
+                gid=0,
+                size=0,
+                sha1=bytes.fromhex(sha),
+                flags=min(len(path.encode()), 0xFFF),
+                path=path,
+            )
+        )
+    return result
+
+
 def cmd_cat_file(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     obj = read_object(repo_root, resolve_revision(repo_root, args.object))
@@ -347,13 +382,7 @@ def cmd_commit(args: argparse.Namespace) -> int:
     lines.append("")
     commit_data = "\n".join(lines).encode()
     commit_sha1 = hash_object(commit_data, obj_type="commit", repo_root=repo_root, write=True)
-    symbolic = head_ref(repo_root)
-    if symbolic:
-        target = git_dir(repo_root) / symbolic
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(f"{commit_sha1}\n", encoding="utf-8")
-    else:
-        (git_dir(repo_root) / "HEAD").write_text(f"{commit_sha1}\n", encoding="utf-8")
+    _update_head_target(repo_root, commit_sha1)
     branch = current_branch(repo_root)
     if branch:
         if args.amend:
@@ -498,6 +527,23 @@ def cmd_restore(args: argparse.Namespace) -> int:
             path=path,
         )
     write_index(repo_root, list(by_path.values()))
+    return 0
+
+
+def cmd_reset(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    target = resolve_revision(repo_root, args.revision)
+    obj = read_object(repo_root, target)
+    if obj.obj_type != "commit":
+        raise ValueError(f"revision '{args.revision}' does not resolve to a commit")
+
+    _update_head_target(repo_root, target)
+    if args.mode == "mixed":
+        write_index(repo_root, _index_entries_from_commit(repo_root, target))
+
+    branch = current_branch(repo_root)
+    label = branch if branch else "HEAD"
+    print(f"reset {label} to {target[:7]} ({args.mode})")
     return 0
 
 

@@ -32,6 +32,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `restore --staged`
 - [x] `.gitignore`-aware `add/status`
 - [x] `commit --amend`
+- [x] `reset --soft|--mixed`
 - [ ] `push`
 
 ## Requirements
@@ -76,6 +77,7 @@ pygit diff
 pygit write-tree
 pygit commit -m "<message>"
 pygit commit --amend [-m "<message>"]
+pygit reset [--soft|--mixed] <revision>
 pygit log [--oneline] [-n <count>]
 pygit rev-parse <revision>
 pygit branch [<name>]

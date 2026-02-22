@@ -14,6 +14,7 @@ from commands import (
     cmd_log,
     cmd_restore,
     cmd_rm,
+    cmd_reset,
     cmd_rev_parse,
     cmd_init,
     cmd_ls_files,
@@ -91,6 +92,20 @@ def build_parser() -> argparse.ArgumentParser:
     restore_parser.add_argument("--staged", action="store_true", help="Restore staged content only")
     restore_parser.add_argument("paths", nargs="+", help="Pathspec to restore")
     restore_parser.set_defaults(func=cmd_restore)
+
+    reset_parser = subparsers.add_parser("reset", help="Move HEAD to another commit")
+    mode_group = reset_parser.add_mutually_exclusive_group()
+    mode_group.add_argument("--soft", action="store_const", const="soft", dest="mode", help="Move HEAD only")
+    mode_group.add_argument(
+        "--mixed",
+        action="store_const",
+        const="mixed",
+        dest="mode",
+        help="Move HEAD and reset index to target tree",
+    )
+    reset_parser.set_defaults(mode="mixed")
+    reset_parser.add_argument("revision", help="Target revision")
+    reset_parser.set_defaults(func=cmd_reset)
 
     return parser
 
