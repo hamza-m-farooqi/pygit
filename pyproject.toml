@@ -1,0 +1,20 @@
+[project]
+name = "pygit"
+version = "0.1.0"
+description = "Minimal educational Git-like CLI utility in Python"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+pygit = "cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["cli", "commands", "index", "objects", "repo"]
+
+[tool.setuptools.package-dir]
+"" = "src"
