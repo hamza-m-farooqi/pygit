@@ -9,7 +9,7 @@ from pathlib import Path
 from index import IndexEntry, build_entry, list_working_tree_files, read_index, write_index
 from objects import hash_object, read_object
 from repo import ensure_repo, git_dir
-from revisions import resolve_revision
+from revisions import current_branch, head_commit, list_branches, resolve_revision
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -144,7 +144,12 @@ def _status_sets(repo_root: Path) -> tuple[list[str], list[str], list[str], list
 def cmd_status(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     staged, changed, deleted, untracked = _status_sets(repo_root)
-    print("On branch master")
+    branch = current_branch(repo_root)
+    if branch:
+        print(f"On branch {branch}")
+    else:
+        detached_at = (_current_head_commit(repo_root) or "unknown")[:7]
+        print(f"HEAD detached at {detached_at}")
     print("")
     if staged:
         print("Changes to be committed:")
@@ -218,11 +223,7 @@ def cmd_write_tree(args: argparse.Namespace) -> int:
 
 
 def _current_head_commit(repo_root: Path) -> str | None:
-    master = git_dir(repo_root) / "refs" / "heads" / "master"
-    if not master.exists():
-        return None
-    commit_id = master.read_text(encoding="utf-8").strip()
-    return commit_id or None
+    return head_commit(repo_root)
 
 
 def _head_index_like_entries(repo_root: Path) -> dict[str, str]:
@@ -314,7 +315,7 @@ def cmd_log(args: argparse.Namespace) -> int:
     try:
         commit_id = resolve_revision(repo_root, "HEAD")
     except ValueError:
-        print("fatal: your current branch 'master' does not have any commits yet")
+        print("fatal: your current branch does not have any commits yet")
         return 1
 
     max_count = args.max_count
@@ -345,6 +346,27 @@ def cmd_log(args: argparse.Namespace) -> int:
 def cmd_rev_parse(args: argparse.Namespace) -> int:
     repo_root = ensure_repo()
     print(resolve_revision(repo_root, args.revision))
+    return 0
+
+
+def cmd_branch(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    if args.name is None:
+        active = current_branch(repo_root)
+        for branch in list_branches(repo_root):
+            marker = "*" if branch == active else " "
+            print(f"{marker} {branch}")
+        return 0
+
+    commit_id = _current_head_commit(repo_root)
+    if not commit_id:
+        raise ValueError("cannot create branch: HEAD does not point to a commit")
+    target = git_dir(repo_root) / "refs" / "heads" / args.name
+    if target.exists():
+        raise ValueError(f"branch '{args.name}' already exists")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(f"{commit_id}\n", encoding="utf-8")
+    print(f"branch '{args.name}' created at {commit_id[:7]}")
     return 0
 
 

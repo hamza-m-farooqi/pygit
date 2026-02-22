@@ -26,6 +26,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `commit`
 - [x] `log`
 - [x] `rev-parse`
+- [x] `branch`
 - [ ] `push`
 
 ## Requirements
@@ -71,6 +72,7 @@ pygit write-tree
 pygit commit -m "<message>"
 pygit log [--oneline] [-n <count>]
 pygit rev-parse <revision>
+pygit branch [<name>]
 ```
 
 ## Development
@@ -105,6 +107,7 @@ uv run python -m compileall -q src
 ## Notes
 
 - Branch reference is currently `master`.
+- `pygit branch` lists local branches and can create a new branch at current `HEAD`.
 - Author values come from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (or committer variants).
 - If env vars are missing, default author values are used.
 

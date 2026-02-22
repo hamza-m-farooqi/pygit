@@ -5,6 +5,7 @@ import sys
 
 from commands import (
     cmd_add,
+    cmd_branch,
     cmd_cat_file,
     cmd_commit,
     cmd_diff,
@@ -69,6 +70,10 @@ def build_parser() -> argparse.ArgumentParser:
     rev_parse_parser = subparsers.add_parser("rev-parse", help="Resolve revision to full commit id")
     rev_parse_parser.add_argument("revision", help="Revision expression (HEAD, branch, short/full SHA)")
     rev_parse_parser.set_defaults(func=cmd_rev_parse)
+
+    branch_parser = subparsers.add_parser("branch", help="List or create branches")
+    branch_parser.add_argument("name", nargs="?", help="Branch name to create")
+    branch_parser.set_defaults(func=cmd_branch)
 
     return parser
 
