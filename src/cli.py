@@ -7,6 +7,7 @@ from commands import (
     cmd_add,
     cmd_branch,
     cmd_cat_file,
+    cmd_checkout,
     cmd_commit,
     cmd_diff,
     cmd_hash_object,
@@ -74,6 +75,10 @@ def build_parser() -> argparse.ArgumentParser:
     branch_parser = subparsers.add_parser("branch", help="List or create branches")
     branch_parser.add_argument("name", nargs="?", help="Branch name to create")
     branch_parser.set_defaults(func=cmd_branch)
+
+    checkout_parser = subparsers.add_parser("checkout", help="Switch branches or detach HEAD at a commit")
+    checkout_parser.add_argument("target", help="Branch name or revision")
+    checkout_parser.set_defaults(func=cmd_checkout)
 
     return parser
 

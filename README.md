@@ -27,6 +27,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `log`
 - [x] `rev-parse`
 - [x] `branch`
+- [x] `checkout`
 - [ ] `push`
 
 ## Requirements
@@ -73,6 +74,7 @@ pygit commit -m "<message>"
 pygit log [--oneline] [-n <count>]
 pygit rev-parse <revision>
 pygit branch [<name>]
+pygit checkout <branch-or-revision>
 ```
 
 ## Development
@@ -106,8 +108,8 @@ uv run python -m compileall -q src
 
 ## Notes
 
-- Branch reference is currently `master`.
 - `pygit branch` lists local branches and can create a new branch at current `HEAD`.
+- `pygit checkout` switches to a branch or detaches `HEAD` at a revision.
 - Author values come from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (or committer variants).
 - If env vars are missing, default author values are used.
 
@@ -116,7 +118,6 @@ uv run python -m compileall -q src
 - commit history (`log`)
 - unstage/remove support
 - `.gitignore`-aware staging/status
-- branch and checkout basics
 - remote push support
 
 ## License

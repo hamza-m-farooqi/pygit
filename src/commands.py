@@ -9,7 +9,7 @@ from pathlib import Path
 from index import IndexEntry, build_entry, list_working_tree_files, read_index, write_index
 from objects import hash_object, read_object
 from repo import ensure_repo, git_dir
-from revisions import current_branch, head_commit, list_branches, resolve_revision
+from revisions import current_branch, head_commit, head_ref, list_branches, resolve_revision
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -43,6 +43,30 @@ def _parse_tree(data: bytes) -> list[tuple[str, str, str]]:
         entries.append((mode, sha1_bytes.hex(), name))
         i = name_end + 21
     return entries
+
+
+def _tree_entries(repo_root: Path, tree_sha: str, prefix: str = "") -> list[tuple[str, str, str]]:
+    tree = read_object(repo_root, tree_sha)
+    entries: list[tuple[str, str, str]] = []
+    for mode, sha, name in _parse_tree(tree.data):
+        path = f"{prefix}{name}" if not prefix else f"{prefix}/{name}"
+        obj = read_object(repo_root, sha)
+        if obj.obj_type == "tree":
+            entries.extend(_tree_entries(repo_root, sha, path))
+        else:
+            entries.append((path, mode, sha))
+    return entries
+
+
+def _commit_tree_sha(repo_root: Path, commit_id: str) -> str:
+    commit = read_object(repo_root, commit_id)
+    if commit.obj_type != "commit":
+        raise ValueError(f"object {commit_id} is not a commit")
+    headers, _ = _parse_commit_payload(commit.data)
+    tree_sha = headers.get("tree")
+    if not tree_sha:
+        raise ValueError(f"commit {commit_id} has no tree")
+    return tree_sha
 
 
 def cmd_cat_file(args: argparse.Namespace) -> int:
@@ -230,14 +254,7 @@ def _head_index_like_entries(repo_root: Path) -> dict[str, str]:
     commit_id = _current_head_commit(repo_root)
     if not commit_id:
         return {}
-    commit_obj = read_object(repo_root, commit_id)
-    tree_sha = None
-    for line in commit_obj.data.decode(errors="replace").splitlines():
-        if line.startswith("tree "):
-            tree_sha = line.split(" ", 1)[1].strip()
-            break
-    if not tree_sha:
-        return {}
+    tree_sha = _commit_tree_sha(repo_root, commit_id)
     return _flatten_tree(repo_root, tree_sha)
 
 
@@ -291,10 +308,18 @@ def cmd_commit(args: argparse.Namespace) -> int:
     lines.append("")
     commit_data = "\n".join(lines).encode()
     commit_sha1 = hash_object(commit_data, obj_type="commit", repo_root=repo_root, write=True)
-    master = git_dir(repo_root) / "refs" / "heads" / "master"
-    master.parent.mkdir(parents=True, exist_ok=True)
-    master.write_text(f"{commit_sha1}\n", encoding="utf-8")
-    print(f"committed to master: {commit_sha1}")
+    symbolic = head_ref(repo_root)
+    if symbolic:
+        target = git_dir(repo_root) / symbolic
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"{commit_sha1}\n", encoding="utf-8")
+    else:
+        (git_dir(repo_root) / "HEAD").write_text(f"{commit_sha1}\n", encoding="utf-8")
+    branch = current_branch(repo_root)
+    if branch:
+        print(f"committed to {branch}: {commit_sha1}")
+    else:
+        print(f"committed in detached HEAD: {commit_sha1}")
     return 0
 
 
@@ -367,6 +392,53 @@ def cmd_branch(args: argparse.Namespace) -> int:
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(f"{commit_id}\n", encoding="utf-8")
     print(f"branch '{args.name}' created at {commit_id[:7]}")
+    return 0
+
+
+def cmd_checkout(args: argparse.Namespace) -> int:
+    repo_root = ensure_repo()
+    staged, changed, deleted, untracked = _status_sets(repo_root)
+    if any([staged, changed, deleted, untracked]):
+        raise ValueError("cannot checkout with local changes; commit or clean your working tree first")
+
+    branch_ref = git_dir(repo_root) / "refs" / "heads" / args.target
+    detached = False
+    if branch_ref.exists():
+        target_commit = branch_ref.read_text(encoding="utf-8").strip()
+        label = args.target
+    else:
+        target_commit = resolve_revision(repo_root, args.target)
+        detached = True
+        label = target_commit[:7]
+
+    tree_sha = _commit_tree_sha(repo_root, target_commit)
+    target_entries = _tree_entries(repo_root, tree_sha)
+
+    for file_path in list_working_tree_files(repo_root):
+        file_path.unlink()
+
+    for rel_path, mode, blob_sha in target_entries:
+        out = repo_root / rel_path
+        out.parent.mkdir(parents=True, exist_ok=True)
+        blob = read_object(repo_root, blob_sha)
+        out.write_bytes(blob.data)
+        if mode == "100755":
+            out.chmod(0o755)
+        else:
+            out.chmod(0o644)
+
+    new_index = [build_entry(repo_root, repo_root / rel_path) for rel_path, _, _ in target_entries]
+    write_index(repo_root, new_index)
+
+    if branch_ref.exists():
+        (git_dir(repo_root) / "HEAD").write_text(f"ref: refs/heads/{args.target}\n", encoding="utf-8")
+    else:
+        (git_dir(repo_root) / "HEAD").write_text(f"{target_commit}\n", encoding="utf-8")
+
+    if detached:
+        print(f"HEAD is now at {label}")
+    else:
+        print(f"switched to branch '{label}'")
     return 0
 
 
