@@ -111,6 +111,12 @@ Basic sanity check:
 uv run python -m compileall -q src
 ```
 
+Run tests:
+
+```bash
+uv run pytest
+```
+
 ## Notes
 
 - `pygit branch` lists local branches and can create a new branch at current `HEAD`.
