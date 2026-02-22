@@ -62,7 +62,8 @@ def build_parser() -> argparse.ArgumentParser:
     write_tree_parser.set_defaults(func=cmd_write_tree)
 
     commit_parser = subparsers.add_parser("commit", help="Write commit object from index")
-    commit_parser.add_argument("-m", "--message", required=True, help="Commit message")
+    commit_parser.add_argument("-m", "--message", help="Commit message")
+    commit_parser.add_argument("--amend", action="store_true", help="Amend current HEAD commit")
     commit_parser.set_defaults(func=cmd_commit)
 
     log_parser = subparsers.add_parser("log", help="Show commit history")

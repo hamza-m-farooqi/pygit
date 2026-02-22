@@ -315,7 +315,19 @@ def cmd_commit(args: argparse.Namespace) -> int:
         raise ValueError("cannot commit: index is empty")
 
     tree_sha1 = _write_tree_recursive(repo_root, _index_to_tree_map(entries))
-    parent = _current_head_commit(repo_root)
+    head_commit_id = _current_head_commit(repo_root)
+    parent = head_commit_id
+    message = args.message
+    if args.amend:
+        if not head_commit_id:
+            raise ValueError("cannot amend: HEAD does not point to a commit")
+        prior_commit = read_object(repo_root, head_commit_id)
+        headers, prior_message = _parse_commit_payload(prior_commit.data)
+        parent = headers.get("parent")
+        if not message:
+            message = prior_message
+    if not message:
+        raise ValueError("commit message is required (use -m)")
 
     timestamp = int(time.time())
     utc_offset = -time.timezone
@@ -331,7 +343,7 @@ def cmd_commit(args: argparse.Namespace) -> int:
     lines.append(f"author {author} {author_time}")
     lines.append(f"committer {author} {author_time}")
     lines.append("")
-    lines.append(args.message)
+    lines.append(message)
     lines.append("")
     commit_data = "\n".join(lines).encode()
     commit_sha1 = hash_object(commit_data, obj_type="commit", repo_root=repo_root, write=True)
@@ -344,9 +356,15 @@ def cmd_commit(args: argparse.Namespace) -> int:
         (git_dir(repo_root) / "HEAD").write_text(f"{commit_sha1}\n", encoding="utf-8")
     branch = current_branch(repo_root)
     if branch:
-        print(f"committed to {branch}: {commit_sha1}")
+        if args.amend:
+            print(f"amended {branch}: {commit_sha1}")
+        else:
+            print(f"committed to {branch}: {commit_sha1}")
     else:
-        print(f"committed in detached HEAD: {commit_sha1}")
+        if args.amend:
+            print(f"amended in detached HEAD: {commit_sha1}")
+        else:
+            print(f"committed in detached HEAD: {commit_sha1}")
     return 0
 
 

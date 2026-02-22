@@ -134,3 +134,31 @@ def test_tracked_paths_remain_visible_after_ignore_rule(tmp_path: Path) -> None:
     status = run_pygit(tmp_path, "status").stdout
     assert "modified: logs/app.log" in status
 
+
+def test_commit_amend_replaces_head_commit(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    write(tmp_path / "note.txt", "v1\n")
+    run_pygit(tmp_path, "add", "note.txt")
+    run_pygit(tmp_path, "commit", "-m", "first")
+    first = run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip()
+
+    write(tmp_path / "note.txt", "v2\n")
+    run_pygit(tmp_path, "add", "note.txt")
+    run_pygit(tmp_path, "commit", "--amend", "-m", "first amended")
+    amended = run_pygit(tmp_path, "rev-parse", "HEAD").stdout.strip()
+    assert amended != first
+
+    oneline = run_pygit(tmp_path, "log", "--oneline", "-n", "1").stdout.strip()
+    assert oneline.endswith("first amended")
+
+    commit_body = run_pygit(tmp_path, "cat-file", "-p", "HEAD").stdout
+    assert "parent " not in commit_body
+
+
+def test_commit_requires_message_without_amend(tmp_path: Path) -> None:
+    run_pygit(tmp_path, "init", ".")
+    write(tmp_path / "note.txt", "x\n")
+    run_pygit(tmp_path, "add", "note.txt")
+    proc = run_pygit(tmp_path, "commit", check=False)
+    assert proc.returncode == 1
+    assert "commit message is required" in proc.stderr

@@ -31,6 +31,7 @@ This is an educational tool, not a replacement for `git`.
 - [x] `rm`
 - [x] `restore --staged`
 - [x] `.gitignore`-aware `add/status`
+- [x] `commit --amend`
 - [ ] `push`
 
 ## Requirements
@@ -74,6 +75,7 @@ pygit status
 pygit diff
 pygit write-tree
 pygit commit -m "<message>"
+pygit commit --amend [-m "<message>"]
 pygit log [--oneline] [-n <count>]
 pygit rev-parse <revision>
 pygit branch [<name>]
