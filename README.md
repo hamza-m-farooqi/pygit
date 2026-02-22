@@ -1,22 +1,78 @@
 # pygit
 
-A minimal Git-like command-line utility written in Python.
+Minimal Git-like CLI written in Python for learning how Git works under the hood.
 
-`pygit` is an educational implementation of core Git mechanics:
-- object hashing and storage
-- binary index read/write
-- tree writing
+## Why this project
+
+`pygit` focuses on core plumbing concepts:
+- Git object hashing and storage
+- binary index parsing/writing
+- tree object generation
 - commit object creation
-- working tree inspection
+- working tree status and diff
 
-It is intentionally small and focused on learning internals rather than replacing Git.
+This is an educational tool, not a replacement for `git`.
+
+## Features
+
+- [x] `init`
+- [x] `hash-object`
+- [x] `cat-file`
+- [x] `add`
+- [x] `ls-files`
+- [x] `status`
+- [x] `diff`
+- [x] `write-tree`
+- [x] `commit`
+- [ ] `log`
+- [ ] `push`
 
 ## Requirements
 
 - Python `>=3.10`
-- `uv` package manager
+- [`uv`](https://docs.astral.sh/uv/)
 
-## Project Layout
+## Installation / Setup
+
+```bash
+uv sync
+```
+
+Run CLI help:
+
+```bash
+uv run pygit --help
+```
+
+## Quick Start
+
+```bash
+mkdir demo && cd demo
+uv run pygit init .
+
+echo "hello pygit" > hello.txt
+uv run pygit add hello.txt
+uv run pygit commit -m "first commit"
+uv run pygit status
+```
+
+## Command Reference
+
+```bash
+pygit init <path>
+pygit hash-object [-w] [-t blob|tree|commit] <file>
+pygit cat-file (-p|-t|-s) <object-id-or-prefix>
+pygit add <path> [<path> ...]
+pygit ls-files [-s]
+pygit status
+pygit diff
+pygit write-tree
+pygit commit -m "<message>"
+```
+
+## Development
+
+Project layout:
 
 ```text
 .
@@ -31,88 +87,32 @@ It is intentionally small and focused on learning internals rather than replacin
     └── __main__.py
 ```
 
-## Setup
-
-Install dependencies and create the environment:
-
-```bash
-uv sync
-```
-
-Run the CLI:
-
-```bash
-uv run pygit --help
-```
-
-You can also run it as a module:
-
-```bash
-uv run python -m src
-```
-
-## Commands
-
-```bash
-pygit init <path>
-pygit hash-object [-w] [-t blob|tree|commit] <file>
-pygit cat-file (-p|-t|-s) <object-id-or-prefix>
-pygit add <path> [<path> ...]
-pygit ls-files [-s]
-pygit status
-pygit diff
-pygit write-tree
-pygit commit -m "<message>"
-```
-
-## Quick Start
-
-```bash
-# create a repository
-mkdir demo && cd demo
-uv run pygit init .
-
-# add content
-echo "hello" > hello.txt
-uv run pygit add hello.txt
-
-# inspect staged entries
-uv run pygit ls-files -s
-
-# create a commit
-uv run pygit commit -m "first commit"
-
-# check status
-uv run pygit status
-```
-
-## Notes
-
-- `pygit` currently operates on the `master` branch reference.
-- Author info is read from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (or committer variants).  
-  Defaults are used if env vars are not set.
-- Remote operations (`push`, fetch/pull workflows) are not implemented yet.
-
-## Development
-
-Run formatting/linting/tests using your preferred tools via `uv`.
-
-Examples:
-
-```bash
-uv run python -m compileall -q src
-```
-
-When adding a package, use:
+Add dependencies with:
 
 ```bash
 uv add <package>
 ```
 
-## Roadmap Ideas
+Basic sanity check:
 
-- `log` command for commit history
-- `rm` and unstage support
-- ignore patterns (`.gitignore` awareness in add/status)
-- lightweight branch and checkout support
+```bash
+uv run python -m compileall -q src
+```
+
+## Notes
+
+- Branch reference is currently `master`.
+- Author values come from `GIT_AUTHOR_NAME` / `GIT_AUTHOR_EMAIL` (or committer variants).
+- If env vars are missing, default author values are used.
+
+## Roadmap
+
+- commit history (`log`)
+- unstage/remove support
+- `.gitignore`-aware staging/status
+- branch and checkout basics
 - remote push support
+
+## License
+
+Add your preferred license (MIT/Apache-2.0/etc.) in a `LICENSE` file.
